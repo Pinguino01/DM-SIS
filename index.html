@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema de Facturacion</title>
+  <style>
+    :root {
+      --blue-900: #0f3f77;
+      --blue-800: #15579d;
+      --blue-700: #1b6ec2;
+      --blue-100: #e8f2ff;
+      --blue-050: #f4f9ff;
+      --border: #d6e4f5;
+      --text: #18324a;
+      --muted: #66788a;
+      --danger: #b42318;
+      --warning: #9a6700;
+      --success: #087443;
+      --white: #ffffff;
+      --shadow: 0 8px 22px rgba(16, 55, 98, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--blue-050);
+      color: var(--text);
+    }
+
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--blue-900);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - 61px);
+    }
+
+    nav {
+      background: var(--blue-900);
+      color: var(--white);
+      padding: 16px 12px;
+    }
+
+    .nav-button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--white);
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .nav-button.active,
+    .nav-button:hover {
+      background: var(--blue-700);
+    }
+
+    main {
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.two {
+      grid-template-columns: minmax(310px, 420px) minmax(0, 1fr);
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+    }
+
+    .panel,
+    .metric {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      color: var(--blue-900);
+      font-size: 17px;
+    }
+
+    .metric {
+      padding: 14px 16px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      color: var(--blue-900);
+      font-size: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 13px;
+      margin: 10px 0 5px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--white);
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid #a9d2ff;
+      border-color: var(--blue-700);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button,
+    .button {
+      border: 1px solid var(--blue-700);
+      background: var(--blue-700);
+      color: var(--white);
+      padding: 9px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+    }
+
+    button.secondary {
+      background: var(--white);
+      color: var(--blue-700);
+    }
+
+    button.danger {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--blue-100);
+      color: var(--blue-900);
+      font-size: 13px;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .table-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .table-actions button {
+      min-height: 32px;
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 7px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--blue-100);
+      color: var(--blue-900);
+      white-space: nowrap;
+    }
+
+    .badge.danger { background: #fee4e2; color: var(--danger); }
+    .badge.warning { background: #fff2cc; color: var(--warning); }
+    .badge.success { background: #d1fadf; color: var(--success); }
+
+    .sale-items {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .sale-item {
+      display: grid;
+      grid-template-columns: 1fr 90px 90px 36px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .total-box {
+      border: 1px solid var(--border);
+      background: var(--blue-100);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .total-line strong {
+      color: var(--blue-900);
+      font-size: 19px;
+    }
+
+    .notice {
+      border-left: 4px solid var(--blue-700);
+      background: var(--white);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      color: var(--muted);
+    }
+
+    .notice.warning {
+      border-left-color: var(--warning);
+      color: var(--warning);
+      background: #fffbeb;
+    }
+
+    .notice.danger {
+      border-left-color: var(--danger);
+      color: var(--danger);
+      background: #fff5f5;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 180px;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 16px;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: var(--white);
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 10px;
+      }
+
+      .nav-button {
+        width: auto;
+        white-space: nowrap;
+        margin: 0;
+      }
+
+      .grid.two,
+      .grid.three {
+        grid-template-columns: 1fr;
+      }
+
+      .sale-item {
+        grid-template-columns: 1fr 80px;
+      }
+
+      .sale-item button {
+        grid-column: span 2;
+      }
+    }
+
+    @media print {
+      header,
+      nav,
+      .no-print,
+      .actions,
+      .table-actions {
+        display: none !important;
+      }
+
+      body { background: white; }
+      .layout { display: block; min-height: 0; }
+      main { padding: 0; }
+      .view { display: none !important; }
+      .view.printing { display: block !important; }
+      .panel { box-shadow: none; border: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sistema de Facturacion</h1>
+    <div class="header-actions">
+      <button class="secondary" id="seedDataBtn" type="button">Cargar datos demo</button>
+      <button class="secondary" id="exportBtn" type="button">Exportar JSON</button>
+      <button class="danger" id="resetBtn" type="button">Reiniciar</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="Secciones">
+      <button class="nav-button active" data-view="dashboard" type="button">Resumen</button>
+      <button class="nav-button" data-view="sales" type="button">Ventas</button>
+      <button class="nav-button" data-view="stock" type="button">Gestion de stock</button>
+      <button class="nav-button" data-view="clients" type="button">Gestion de clientes</button>
+      <button class="nav-button" data-view="invoices" type="button">Facturas y pagos</button>
+    </nav>
+
+    <main>
+      <div id="appMessage"></div>
+
+      <section class="view active" id="dashboard">
+        <div class="grid three" id="metrics"></div>
+        <div class="grid two" style="margin-top:16px">
+          <div class="panel">
+            <h2 class="panel-title">Alertas de stock</h2>
+            <div id="stockAlerts"></div>
+          </div>
+          <div class="panel">
+            <h2 class="panel-title">Credito y vencimientos</h2>
+            <div id="creditAlerts"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="sales">
+        <div class="grid two">
+          <form class="panel" id="saleForm">
+            <h2 class="panel-title">Nueva venta</h2>
+            <label for="saleClient">Cliente</label>
+            <select id="saleClient"></select>
+
+            <div class="row">
+              <div>
+                <label for="saleType">Tipo de venta</label>
+                <select id="saleType">
+                  <option value="cash">Contado</option>
+                  <option value="credit">Credito</option>
+                </select>
+              </div>
+              <div>
+                <label for="saleDueDate">Fecha de vencimiento</label>
+                <input id="saleDueDate" type="date">
+              </div>
+            </div>
+
+            <label>Productos</label>
+            <div class="sale-items" id="saleItems"></div>
+            <button class="secondary" id="addSaleItemBtn" type="button">Agregar producto</button>
+
+            <div class="total-box" id="saleSummary"></div>
+
+            <label for="saleNotes">Notas</label>
+            <textarea id="saleNotes" placeholder="Detalle opcional para la factura"></textarea>
+
+            <div id="saleWarnings"></div>
+            <div class="actions">
+              <button id="saveSaleBtn" type="submit">Registrar venta</button>
+              <button class="secondary" id="clearSaleBtn" type="button">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <h2 class="panel-title">Ultimas ventas</h2>
+            <div id="recentSales"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="stock">
+        <div class="grid two">
+          <form class="panel" id="productForm">
+            <h2 class="panel-title" id="productFormTitle">Nuevo producto</h2>
+            <input id="productId" type="hidden">
+            <label for="productName">Nombre</label>
+            <input id="productName" required>
+            <div class="row">
+              <div>
+                <label for="productSku">Codigo/SKU</label>
+                <input id="productSku">
+              </div>
+              <div>
+                <label for="productCategory">Categoria</label>
+                <input id="productCategory">
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="productPrice">Precio de venta</label>
+                <input id="productPrice" type="number" min="0" step="0.01" required>
+              </div>
+              <div>
+                <label for="productCost">Costo</label>
+                <input id="productCost" type="number" min="0" step="0.01">
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <label for="productStock">Stock actual</label>
+                <input id="productStock" type="number" min="0" step="1" required>
+              </div>
+              <div>
+                <label for="productMinStock">Stock minimo</label>
+                <input id="productMinStock" type="number" min="0" step="1" value="5">
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit">Guardar producto</button>
+              <button class="secondary" id="clearProductBtn" type="button">Cancelar</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <h2 class="panel-title">Inventario</h2>
+            <div class="filters">
+              <input id="productSearch" placeholder="Buscar producto">
+              <select id="stockFilter">
+                <option value="all">Todos</option>
+                <option value="low">Bajo minimo</option>
+                <option value="out">Sin stock</option>
+              </select>
+            </div>
+            <div id="productTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="clients">
+        <div class="grid two">
+          <form class="panel" id="clientForm">
+            <h2 class="panel-title" id="clientFormTitle">Nuevo cliente</h2>
+            <input id="clientId" type="hidden">
+            <label for="clientName">Nombre o razon social</label>
+            <input id="clientName" required>
+            <div class="row">
+              <div>
+                <label for="clientDoc">Documento/NIT</label>
+                <input id="clientDoc">
+              </div>
+              <div>
+                <label for="clientPhone">Telefono</label>
+                <input id="clientPhone">
+              </div>
+            </div>
+            <label for="clientEmail">Correo</label>
+            <input id="clientEmail" type="email">
+            <label for="clientAddress">Direccion</label>
+            <textarea id="clientAddress"></textarea>
+            <div class="row">
+              <div>
+                <label for="clientCreditLimit">Limite de credito</label>
+                <input id="clientCreditLimit" type="number" min="0" step="0.01" value="0">
+              </div>
+              <div>
+                <label for="clientTimeLimit">Limite de tiempo</label>
+                <select id="clientTimeLimit">
+                  <option value="0">Sin credito</option>
+                  <option value="7">7 dias</option>
+                  <option value="15">15 dias</option>
+                  <option value="30">30 dias</option>
+                  <option value="45">45 dias</option>
+                  <option value="60">60 dias</option>
+                </select>
+              </div>
+            </div>
+            <label for="clientNotes">Notas internas</label>
+            <textarea id="clientNotes"></textarea>
+            <div class="actions">
+              <button type="submit">Guardar cliente</button>
+              <button class="secondary" id="clearClientBtn" type="button">Cancelar</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <h2 class="panel-title">Clientes</h2>
+            <div class="filters">
+              <input id="clientSearch" placeholder="Buscar cliente">
+              <select id="clientFilter">
+                <option value="all">Todos</option>
+                <option value="debt">Con deuda</option>
+                <option value="overdue">Vencidos</option>
+              </select>
+            </div>
+            <div id="clientTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="invoices">
+        <div class="panel">
+          <h2 class="panel-title">Facturas y pagos</h2>
+          <div class="filters">
+            <input id="invoiceSearch" placeholder="Buscar por numero, cliente o fecha">
+            <select id="invoiceFilter">
+              <option value="all">Todas</option>
+              <option value="open">Pendientes</option>
+              <option value="paid">Pagadas</option>
+              <option value="overdue">Vencidas</option>
+            </select>
+          </div>
+          <div id="invoiceTable"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "facturacion-simple-v1";
+    const currency = new Intl.NumberFormat("es-BO", { style: "currency", currency: "BOB" });
+    const today = () => new Date().toISOString().slice(0, 10);
+    const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+    let state = loadState();
+
+    const els = {
+      navButtons: document.querySelectorAll(".nav-button"),
+      views: document.querySelectorAll(".view"),
+      metrics: document.getElementById("metrics"),
+      stockAlerts: document.getElementById("stockAlerts"),
+      creditAlerts: document.getElementById("creditAlerts"),
+      saleForm: document.getElementById("saleForm"),
+      saleClient: document.getElementById("saleClient"),
+      saleType: document.getElementById("saleType"),
+      saleDueDate: document.getElementById("saleDueDate"),
+      saleItems: document.getElementById("saleItems"),
+      saleSummary: document.getElementById("saleSummary"),
+      saleWarnings: document.getElementById("saleWarnings"),
+      recentSales: document.getElementById("recentSales"),
+      saleNotes: document.getElementById("saleNotes"),
+      productForm: document.getElementById("productForm"),
+      productFormTitle: document.getElementById("productFormTitle"),
+      productTable: document.getElementById("productTable"),
+      productSearch: document.getElementById("productSearch"),
+      stockFilter: document.getElementById("stockFilter"),
+      clientForm: document.getElementById("clientForm"),
+      clientFormTitle: document.getElementById("clientFormTitle"),
+      clientTable: document.getElementById("clientTable"),
+      clientSearch: document.getElementById("clientSearch"),
+      clientFilter: document.getElementById("clientFilter"),
+      invoiceTable: document.getElementById("invoiceTable"),
+      invoiceSearch: document.getElementById("invoiceSearch"),
+      invoiceFilter: document.getElementById("invoiceFilter"),
+      appMessage: document.getElementById("appMessage")
+    };
+
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+      return { products: [], clients: [], invoices: [], invoiceSeq: 1 };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function money(value) {
+      return currency.format(Number(value || 0));
+    }
+
+    function dateAdd(dateString, days) {
+      const date = new Date(`${dateString}T00:00:00`);
+      date.setDate(date.getDate() + Number(days || 0));
+      return date.toISOString().slice(0, 10);
+    }
+
+    function clientDebt(clientId) {
+      return state.invoices
+        .filter(inv => inv.clientId === clientId && inv.status !== "paid")
+        .reduce((sum, inv) => sum + inv.balance, 0);
+    }
+
+    function isOverdue(inv) {
+      return inv.status !== "paid" && inv.dueDate && inv.dueDate < today();
+    }
+
+    function invoiceStatus(inv) {
+      if (inv.status === "paid") return '<span class="badge success">Pagada</span>';
+      if (isOverdue(inv)) return '<span class="badge danger">Vencida</span>';
+      return '<span class="badge warning">Pendiente</span>';
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+
+    function tableOrEmpty(rows, emptyText) {
+      return rows.length ? rows.join("") : `<div class="empty">${emptyText}</div>`;
+    }
+
+    function showMessage(text, type = "success") {
+      els.appMessage.innerHTML = `<div class="notice ${type}">${escapeHtml(text)}</div>`;
+      window.setTimeout(() => {
+        els.appMessage.innerHTML = "";
+      }, 4500);
+    }
+
+    function render() {
+      renderMetrics();
+      renderSaleForm();
+      renderRecentSales();
+      renderProducts();
+      renderClients();
+      renderInvoices();
+    }
+
+    function renderMetrics() {
+      const salesTotal = state.invoices.reduce((sum, inv) => sum + inv.total, 0);
+      const debtTotal = state.invoices.reduce((sum, inv) => sum + inv.balance, 0);
+      const lowStock = state.products.filter(p => p.stock <= p.minStock).length;
+      els.metrics.innerHTML = `
+        <div class="metric"><span>Ventas registradas</span><strong>${money(salesTotal)}</strong></div>
+        <div class="metric"><span>Cuentas por cobrar</span><strong>${money(debtTotal)}</strong></div>
+        <div class="metric"><span>Productos bajo minimo</span><strong>${lowStock}</strong></div>
+      `;
+
+      const stockRows = state.products
+        .filter(p => p.stock <= p.minStock)
+        .sort((a, b) => a.stock - b.stock)
+        .map(p => `<div class="notice ${p.stock === 0 ? "danger" : "warning"}">${escapeHtml(p.name)}: ${p.stock} unidades, minimo ${p.minStock}</div>`);
+      els.stockAlerts.innerHTML = tableOrEmpty(stockRows, "No hay alertas de stock.");
+
+      const creditRows = state.clients
+        .map(c => ({ ...c, debt: clientDebt(c.id), overdue: state.invoices.some(inv => inv.clientId === c.id && isOverdue(inv)) }))
+        .filter(c => c.debt > 0 || c.overdue)
+        .map(c => `<div class="notice ${c.overdue ? "danger" : "warning"}">${escapeHtml(c.name)} debe ${money(c.debt)}${c.overdue ? " y tiene facturas vencidas" : ""}.</div>`);
+      els.creditAlerts.innerHTML = tableOrEmpty(creditRows, "No hay cuentas pendientes relevantes.");
+    }
+
+    function renderSaleForm() {
+      const draftRows = Array.from(els.saleItems.children).map(row => ({
+        productId: row.querySelector(".sale-product")?.value || "",
+        qty: row.querySelector(".sale-qty")?.value || 1,
+        price: row.querySelector(".sale-price")?.value || 0
+      }));
+
+      els.saleClient.innerHTML = `<option value="">Venta sin cliente especifico</option>` +
+        state.clients
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(c => `<option value="${c.id}">${escapeHtml(c.name)} - disponible ${money(Math.max(0, Number(c.creditLimit) - clientDebt(c.id)))}</option>`)
+          .join("");
+
+      els.saleItems.innerHTML = "";
+      (draftRows.length ? draftRows : [{}]).forEach(row => addSaleItem(row));
+      updateSaleSummary();
+    }
+
+    function addSaleItem(item = {}) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "sale-item";
+      wrapper.innerHTML = `
+        <div>
+          <label>Producto</label>
+          <select class="sale-product">
+            <option value="">Seleccione</option>
+            ${state.products.map(p => `<option value="${p.id}" ${item.productId === p.id ? "selected" : ""}>${escapeHtml(p.name)} (${p.stock} disp.)</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label>Cantidad</label>
+          <input class="sale-qty" type="number" min="1" step="1" value="${item.qty || 1}">
+        </div>
+        <div>
+          <label>Precio</label>
+          <input class="sale-price" type="number" min="0" step="0.01" value="${item.price || 0}">
+        </div>
+        <button class="danger remove-item" type="button">X</button>
+      `;
+      els.saleItems.appendChild(wrapper);
+      wrapper.querySelector(".sale-product").addEventListener("change", event => {
+        const product = state.products.find(p => p.id === event.target.value);
+        wrapper.querySelector(".sale-price").value = product ? product.price : 0;
+        updateSaleSummary();
+      });
+      wrapper.querySelectorAll("input, select").forEach(input => input.addEventListener("input", updateSaleSummary));
+      wrapper.querySelector(".remove-item").addEventListener("click", () => {
+        wrapper.remove();
+        if (!els.saleItems.children.length) addSaleItem();
+        updateSaleSummary();
+      });
+    }
+
+    function getSaleItems() {
+      return Array.from(els.saleItems.children).map(row => {
+        const productId = row.querySelector(".sale-product").value;
+        const product = state.products.find(p => p.id === productId);
+        const qty = Number(row.querySelector(".sale-qty").value || 0);
+        const price = Number(row.querySelector(".sale-price").value || 0);
+        return product ? { productId, name: product.name, qty, price, subtotal: qty * price, stock: product.stock } : null;
+      }).filter(Boolean);
+    }
+
+    function updateSaleSummary() {
+      const items = getSaleItems();
+      const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+      const client = state.clients.find(c => c.id === els.saleClient.value);
+      const isCredit = els.saleType.value === "credit";
+      const warnings = [];
+
+      items.forEach(item => {
+        if (item.qty > item.stock) warnings.push(`Stock insuficiente para ${escapeHtml(item.name)}. Disponible: ${item.stock}.`);
+      });
+
+      if (isCredit && !client) warnings.push("Para ventas a credito debe seleccionar un cliente.");
+      if (isCredit && client) {
+        const available = Number(client.creditLimit || 0) - clientDebt(client.id);
+        if (total > available) warnings.push(`El total supera el credito disponible del cliente (${money(available)}).`);
+        if (!Number(client.timeLimit || 0)) warnings.push("El cliente no tiene limite de tiempo de credito configurado.");
+        if (!els.saleDueDate.value) els.saleDueDate.value = dateAdd(today(), client.timeLimit);
+      }
+
+      if (!isCredit) els.saleDueDate.value = "";
+
+      els.saleSummary.innerHTML = `
+        <div class="total-line"><span>Items</span><strong>${items.length}</strong></div>
+        <div class="total-line"><span>Total</span><strong>${money(total)}</strong></div>
+      `;
+      els.saleWarnings.innerHTML = warnings.map(w => `<div class="notice danger">${w}</div>`).join("");
+      document.getElementById("saveSaleBtn").disabled = warnings.length > 0 || items.length === 0 || total <= 0;
+    }
+
+    function renderRecentSales() {
+      const rows = state.invoices.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8).map(inv => {
+        const client = state.clients.find(c => c.id === inv.clientId);
+        return `
+          <tr>
+            <td>${escapeHtml(inv.number)}</td>
+            <td>${client ? escapeHtml(client.name) : "Sin cliente"}</td>
+            <td>${money(inv.total)}</td>
+            <td>${invoiceStatus(inv)}</td>
+          </tr>`;
+      });
+      els.recentSales.innerHTML = rows.length ? `<table><thead><tr><th>Nro.</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<div class="empty">Todavia no hay ventas registradas.</div>';
+    }
+
+    function renderProducts() {
+      const search = els.productSearch.value.toLowerCase();
+      const filter = els.stockFilter.value;
+      const products = state.products
+        .filter(p => !search || [p.name, p.sku, p.category].join(" ").toLowerCase().includes(search))
+        .filter(p => filter === "all" || (filter === "low" && p.stock <= p.minStock) || (filter === "out" && p.stock === 0))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const rows = products.map(p => `
+        <tr>
+          <td><strong>${escapeHtml(p.name)}</strong><br><span class="muted">${escapeHtml(p.sku || "Sin codigo")}</span></td>
+          <td>${escapeHtml(p.category || "-")}</td>
+          <td>${money(p.price)}</td>
+          <td>${p.stock <= p.minStock ? `<span class="badge ${p.stock === 0 ? "danger" : "warning"}">${p.stock}</span>` : p.stock}</td>
+          <td>${p.minStock}</td>
+          <td class="table-actions">
+            <button class="secondary" type="button" onclick="editProduct('${p.id}')">Editar</button>
+            <button class="danger" type="button" onclick="deleteProduct('${p.id}')">Eliminar</button>
+          </td>
+        </tr>`);
+      els.productTable.innerHTML = rows.length ? `<table><thead><tr><th>Producto</th><th>Categoria</th><th>Precio</th><th>Stock</th><th>Min.</th><th>Acciones</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<div class="empty">No hay productos para mostrar.</div>';
+    }
+
+    function renderClients() {
+      const search = els.clientSearch.value.toLowerCase();
+      const filter = els.clientFilter.value;
+      const clients = state.clients
+        .map(c => ({ ...c, debt: clientDebt(c.id), overdue: state.invoices.some(inv => inv.clientId === c.id && isOverdue(inv)) }))
+        .filter(c => !search || [c.name, c.doc, c.phone, c.email].join(" ").toLowerCase().includes(search))
+        .filter(c => filter === "all" || (filter === "debt" && c.debt > 0) || (filter === "overdue" && c.overdue))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const rows = clients.map(c => `
+        <tr>
+          <td><strong>${escapeHtml(c.name)}</strong><br>${escapeHtml(c.doc || "Sin documento")}</td>
+          <td>${escapeHtml(c.phone || "-")}<br>${escapeHtml(c.email || "")}</td>
+          <td>${money(c.creditLimit)}<br><span class="badge">${c.timeLimit || 0} dias</span></td>
+          <td>${money(c.debt)} ${c.overdue ? '<span class="badge danger">Vencido</span>' : ""}</td>
+          <td class="table-actions">
+            <button class="secondary" type="button" onclick="editClient('${c.id}')">Editar</button>
+            <button class="danger" type="button" onclick="deleteClient('${c.id}')">Eliminar</button>
+          </td>
+        </tr>`);
+      els.clientTable.innerHTML = rows.length ? `<table><thead><tr><th>Cliente</th><th>Contacto</th><th>Credito</th><th>Saldo</th><th>Acciones</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<div class="empty">No hay clientes para mostrar.</div>';
+    }
+
+    function renderInvoices() {
+      const search = els.invoiceSearch.value.toLowerCase();
+      const filter = els.invoiceFilter.value;
+      const invoices = state.invoices
+        .filter(inv => {
+          const client = state.clients.find(c => c.id === inv.clientId);
+          const haystack = [inv.number, inv.createdAt, inv.dueDate, client?.name].join(" ").toLowerCase();
+          return !search || haystack.includes(search);
+        })
+        .filter(inv => filter === "all" || (filter === "open" && inv.status !== "paid") || (filter === "paid" && inv.status === "paid") || (filter === "overdue" && isOverdue(inv)))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const rows = invoices.map(inv => {
+        const client = state.clients.find(c => c.id === inv.clientId);
+        return `
+          <tr>
+            <td><strong>${escapeHtml(inv.number)}</strong><br>${inv.createdAt}</td>
+            <td>${client ? escapeHtml(client.name) : "Sin cliente"}</td>
+            <td>${inv.items.map(i => `${escapeHtml(i.name)} x ${i.qty}`).join("<br>")}</td>
+            <td>${money(inv.total)}<br>Saldo: ${money(inv.balance)}</td>
+            <td>${inv.type === "credit" ? `Vence: ${inv.dueDate || "-"}` : "Contado"}<br>${invoiceStatus(inv)}</td>
+            <td class="table-actions">
+              ${inv.balance > 0 ? `<button type="button" onclick="registerPayment('${inv.id}')">Abonar</button>` : ""}
+              <button class="secondary" type="button" onclick="printInvoice('${inv.id}')">Imprimir</button>
+              <button class="danger" type="button" onclick="deleteInvoice('${inv.id}')">Eliminar</button>
+            </td>
+          </tr>`;
+      });
+      els.invoiceTable.innerHTML = rows.length ? `<table><thead><tr><th>Factura</th><th>Cliente</th><th>Detalle</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<div class="empty">No hay facturas para mostrar.</div>';
+    }
+
+    function clearProductForm() {
+      els.productForm.reset();
+      document.getElementById("productId").value = "";
+      document.getElementById("productMinStock").value = 5;
+      els.productFormTitle.textContent = "Nuevo producto";
+    }
+
+    function clearClientForm() {
+      els.clientForm.reset();
+      document.getElementById("clientId").value = "";
+      document.getElementById("clientCreditLimit").value = 0;
+      document.getElementById("clientTimeLimit").value = 0;
+      els.clientFormTitle.textContent = "Nuevo cliente";
+    }
+
+    function clearSaleForm() {
+      els.saleForm.reset();
+      els.saleItems.innerHTML = "";
+      addSaleItem();
+      updateSaleSummary();
+    }
+
+    window.editProduct = function(id) {
+      const p = state.products.find(item => item.id === id);
+      if (!p) return;
+      document.getElementById("productId").value = p.id;
+      document.getElementById("productName").value = p.name;
+      document.getElementById("productSku").value = p.sku || "";
+      document.getElementById("productCategory").value = p.category || "";
+      document.getElementById("productPrice").value = p.price;
+      document.getElementById("productCost").value = p.cost || 0;
+      document.getElementById("productStock").value = p.stock;
+      document.getElementById("productMinStock").value = p.minStock;
+      els.productFormTitle.textContent = "Editar producto";
+    };
+
+    window.deleteProduct = function(id) {
+      const used = state.invoices.some(inv => inv.items.some(item => item.productId === id));
+      if (used) return alert("No se puede eliminar un producto que ya fue facturado.");
+      if (!confirm("Eliminar producto?")) return;
+      state.products = state.products.filter(p => p.id !== id);
+      saveState();
+      render();
+    };
+
+    window.editClient = function(id) {
+      const c = state.clients.find(item => item.id === id);
+      if (!c) return;
+      document.getElementById("clientId").value = c.id;
+      document.getElementById("clientName").value = c.name;
+      document.getElementById("clientDoc").value = c.doc || "";
+      document.getElementById("clientPhone").value = c.phone || "";
+      document.getElementById("clientEmail").value = c.email || "";
+      document.getElementById("clientAddress").value = c.address || "";
+      document.getElementById("clientCreditLimit").value = c.creditLimit || 0;
+      document.getElementById("clientTimeLimit").value = c.timeLimit || 0;
+      document.getElementById("clientNotes").value = c.notes || "";
+      els.clientFormTitle.textContent = "Editar cliente";
+    };
+
+    window.deleteClient = function(id) {
+      const used = state.invoices.some(inv => inv.clientId === id);
+      if (used) return alert("No se puede eliminar un cliente con facturas registradas.");
+      if (!confirm("Eliminar cliente?")) return;
+      state.clients = state.clients.filter(c => c.id !== id);
+      saveState();
+      render();
+    };
+
+    window.registerPayment = function(id) {
+      const inv = state.invoices.find(item => item.id === id);
+      if (!inv) return;
+      const value = Number(prompt(`Saldo pendiente: ${money(inv.balance)}. Monto a abonar:`));
+      if (!value || value <= 0) return;
+      inv.payments.push({ amount: Math.min(value, inv.balance), date: today() });
+      inv.balance = Math.max(0, inv.balance - value);
+      inv.status = inv.balance <= 0 ? "paid" : "open";
+      saveState();
+      render();
+    };
+
+    window.deleteInvoice = function(id) {
+      const inv = state.invoices.find(item => item.id === id);
+      if (!inv || !confirm("Eliminar factura y devolver stock?")) return;
+      inv.items.forEach(item => {
+        const product = state.products.find(p => p.id === item.productId);
+        if (product) product.stock += item.qty;
+      });
+      state.invoices = state.invoices.filter(item => item.id !== id);
+      saveState();
+      render();
+    };
+
+    window.printInvoice = function(id) {
+      const inv = state.invoices.find(item => item.id === id);
+      if (!inv) return;
+      const client = state.clients.find(c => c.id === inv.clientId);
+      const printView = document.createElement("section");
+      printView.className = "view printing";
+      printView.innerHTML = `
+        <div class="panel">
+          <h2>Factura ${escapeHtml(inv.number)}</h2>
+          <p><strong>Fecha:</strong> ${inv.createdAt}</p>
+          <p><strong>Cliente:</strong> ${client ? escapeHtml(client.name) : "Sin cliente especifico"}</p>
+          <table>
+            <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+            <tbody>${inv.items.map(i => `<tr><td>${escapeHtml(i.name)}</td><td>${i.qty}</td><td>${money(i.price)}</td><td>${money(i.subtotal)}</td></tr>`).join("")}</tbody>
+          </table>
+          <h3>Total: ${money(inv.total)}</h3>
+          <p><strong>Estado:</strong> ${inv.status === "paid" ? "Pagada" : "Pendiente"} ${inv.dueDate ? `- vence ${inv.dueDate}` : ""}</p>
+          <p>${escapeHtml(inv.notes || "")}</p>
+        </div>`;
+      document.body.appendChild(printView);
+      window.print();
+      printView.remove();
+    };
+
+    els.navButtons.forEach(btn => btn.addEventListener("click", () => {
+      els.navButtons.forEach(b => b.classList.remove("active"));
+      els.views.forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.view).classList.add("active");
+    }));
+
+    document.getElementById("addSaleItemBtn").addEventListener("click", () => addSaleItem());
+    document.getElementById("clearSaleBtn").addEventListener("click", clearSaleForm);
+    els.saleClient.addEventListener("change", updateSaleSummary);
+    els.saleType.addEventListener("change", updateSaleSummary);
+    els.saleDueDate.addEventListener("change", updateSaleSummary);
+
+    els.saleForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const items = getSaleItems();
+      const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+      if (!items.length || total <= 0) return;
+
+      items.forEach(item => {
+        const product = state.products.find(p => p.id === item.productId);
+        product.stock -= item.qty;
+      });
+
+      const type = els.saleType.value;
+      const inv = {
+        id: uid("inv"),
+        number: `F-${String(state.invoiceSeq++).padStart(6, "0")}`,
+        clientId: els.saleClient.value || "",
+        type,
+        createdAt: today(),
+        dueDate: type === "credit" ? els.saleDueDate.value : "",
+        items,
+        total,
+        balance: type === "credit" ? total : 0,
+        payments: type === "cash" ? [{ amount: total, date: today() }] : [],
+        status: type === "cash" ? "paid" : "open",
+        notes: els.saleNotes.value.trim()
+      };
+      state.invoices.push(inv);
+      saveState();
+      clearSaleForm();
+      render();
+      showMessage(`Venta registrada: ${inv.number}`);
+    });
+
+    els.productForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const id = document.getElementById("productId").value || uid("prod");
+      const payload = {
+        id,
+        name: document.getElementById("productName").value.trim(),
+        sku: document.getElementById("productSku").value.trim(),
+        category: document.getElementById("productCategory").value.trim(),
+        price: Number(document.getElementById("productPrice").value || 0),
+        cost: Number(document.getElementById("productCost").value || 0),
+        stock: Number(document.getElementById("productStock").value || 0),
+        minStock: Number(document.getElementById("productMinStock").value || 0)
+      };
+      state.products = state.products.filter(p => p.id !== id).concat(payload);
+      saveState();
+      clearProductForm();
+      render();
+    });
+
+    els.clientForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const id = document.getElementById("clientId").value || uid("cli");
+      const payload = {
+        id,
+        name: document.getElementById("clientName").value.trim(),
+        doc: document.getElementById("clientDoc").value.trim(),
+        phone: document.getElementById("clientPhone").value.trim(),
+        email: document.getElementById("clientEmail").value.trim(),
+        address: document.getElementById("clientAddress").value.trim(),
+        creditLimit: Number(document.getElementById("clientCreditLimit").value || 0),
+        timeLimit: Number(document.getElementById("clientTimeLimit").value || 0),
+        notes: document.getElementById("clientNotes").value.trim()
+      };
+      state.clients = state.clients.filter(c => c.id !== id).concat(payload);
+      saveState();
+      clearClientForm();
+      render();
+    });
+
+    document.getElementById("clearProductBtn").addEventListener("click", clearProductForm);
+    document.getElementById("clearClientBtn").addEventListener("click", clearClientForm);
+    [els.productSearch, els.stockFilter, els.clientSearch, els.clientFilter, els.invoiceSearch, els.invoiceFilter].forEach(el => {
+      el.addEventListener("input", render);
+      el.addEventListener("change", render);
+    });
+
+    document.getElementById("seedDataBtn").addEventListener("click", () => {
+      if (state.products.length || state.clients.length || state.invoices.length) {
+        if (!confirm("Esto agregara datos demo a los datos actuales. Continuar?")) return;
+      }
+      state.products.push(
+        { id: uid("prod"), name: "Arroz 1kg", sku: "ARR-001", category: "Abarrotes", price: 12, cost: 8, stock: 35, minStock: 10 },
+        { id: uid("prod"), name: "Aceite 900ml", sku: "ACE-900", category: "Abarrotes", price: 18, cost: 13, stock: 8, minStock: 12 },
+        { id: uid("prod"), name: "Azucar 1kg", sku: "AZU-001", category: "Abarrotes", price: 9, cost: 6, stock: 0, minStock: 8 }
+      );
+      state.clients.push(
+        { id: uid("cli"), name: "Cliente General", doc: "0", phone: "", email: "", address: "", creditLimit: 0, timeLimit: 0, notes: "" },
+        { id: uid("cli"), name: "Comercial Los Andes", doc: "1234567", phone: "70000001", email: "compras@losandes.bo", address: "Av. Principal 100", creditLimit: 1500, timeLimit: 30, notes: "Buen historial" }
+      );
+      saveState();
+      render();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `facturacion-backup-${today()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!confirm("Reiniciar todos los datos del sistema?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      clearSaleForm();
+      clearProductForm();
+      clearClientForm();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
