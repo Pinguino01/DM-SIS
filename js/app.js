@@ -11,19 +11,33 @@ import { renderPurchases } from "../modules/purchases.js";
 import { renderInventory } from "../modules/inventory.js";
 import { renderSettings } from "../modules/settings.js";
 import { renderCash } from "../modules/cash.js";
+import { renderAccountingSection } from "../modules/accounting.js";
 
 const modules = [
-  { id: "dashboard", label: "Dashboard", icon: "▦", render: renderDashboard },
-  { id: "sales", label: "Ventas", icon: "$", render: renderSales },
-  { id: "products", label: "Productos", icon: "◫", render: renderProducts },
-  { id: "inventory", label: "Inventario", icon: "⇄", render: renderInventory },
-  { id: "clients", label: "Clientes", icon: "◎", render: renderClients },
-  { id: "invoices", label: "Facturas", icon: "▤", render: renderInvoices },
-  { id: "payments", label: "Caja", icon: "□", render: renderCash },
-  { id: "suppliers", label: "Proveedores", icon: "◇", render: renderSuppliers },
-  { id: "purchases", label: "Compras", icon: "＋", render: renderPurchases },
-  { id: "reports", label: "Reportes", icon: "∑", render: renderReports },
-  { id: "settings", label: "Configuracion", icon: "⚙", render: renderSettings }
+  { id: "dashboard", group: "COMERCIAL", label: "Dashboard", icon: "D", render: renderDashboard },
+  { id: "sales", group: "COMERCIAL", label: "Ventas", icon: "$", render: renderSales },
+  { id: "products", group: "COMERCIAL", label: "Productos", icon: "P", render: renderProducts },
+  { id: "inventory", group: "COMERCIAL", label: "Inventario", icon: "I", render: renderInventory },
+  { id: "clients", group: "COMERCIAL", label: "Clientes", icon: "C", render: renderClients },
+  { id: "invoices", group: "COMERCIAL", label: "Facturas", icon: "F", render: renderInvoices },
+  { id: "payments", group: "COMERCIAL", label: "Caja", icon: "J", render: renderCash },
+  { id: "suppliers", group: "COMERCIAL", label: "Proveedores", icon: "S", render: renderSuppliers },
+  { id: "purchases", group: "COMERCIAL", label: "Compras", icon: "+", render: renderPurchases },
+  { id: "reports", group: "COMERCIAL", label: "Reportes", icon: "R", render: renderReports },
+  { id: "accountingDashboard", group: "CONTABILIDAD", label: "Resumen contable", icon: "R", render: (app) => renderAccountingSection(app, "accountingDashboard") },
+  { id: "chartOfAccounts", group: "CONTABILIDAD", label: "Catalogo de cuentas", icon: "C", render: (app) => renderAccountingSection(app, "chartOfAccounts") },
+  { id: "journal", group: "CONTABILIDAD", label: "Asientos", icon: "A", render: (app) => renderAccountingSection(app, "journal") },
+  { id: "ledger", group: "CONTABILIDAD", label: "Libro mayor", icon: "M", render: (app) => renderAccountingSection(app, "ledger") },
+  { id: "trialBalance", group: "CONTABILIDAD", label: "Balanza", icon: "B", render: (app) => renderAccountingSection(app, "trialBalance") },
+  { id: "ar", group: "CONTABILIDAD", label: "Cuentas por cobrar", icon: "R", render: (app) => renderAccountingSection(app, "ar") },
+  { id: "ap", group: "CONTABILIDAD", label: "Cuentas por pagar", icon: "P", render: (app) => renderAccountingSection(app, "ap") },
+  { id: "banks", group: "CONTABILIDAD", label: "Caja y bancos", icon: "B", render: (app) => renderAccountingSection(app, "banks") },
+  { id: "reconciliation", group: "CONTABILIDAD", label: "Conciliacion bancaria", icon: "X", render: (app) => renderAccountingSection(app, "reconciliation") },
+  { id: "costCenters", group: "CONTABILIDAD", label: "Centros de costos", icon: "K", render: (app) => renderAccountingSection(app, "costCenters") },
+  { id: "periods", group: "CONTABILIDAD", label: "Periodos", icon: "T", render: (app) => renderAccountingSection(app, "periods") },
+  { id: "financialStatements", group: "CONTABILIDAD", label: "Estados financieros", icon: "E", render: (app) => renderAccountingSection(app, "financialStatements") },
+  { id: "accountingSettings", group: "CONTABILIDAD", label: "Configuracion contable", icon: "G", render: (app) => renderAccountingSection(app, "accountingSettings") },
+  { id: "settings", group: "SISTEMA", label: "Configuracion", icon: "O", render: renderSettings }
 ];
 
 const app = {
@@ -234,10 +248,15 @@ const app = {
 };
 
 function renderNav() {
-  document.getElementById("mainNav").innerHTML = modules.map((mod) => `
+  let currentGroup = "";
+  document.getElementById("mainNav").innerHTML = modules.map((mod) => {
+    const group = mod.group !== currentGroup ? `<div class="nav-group">${mod.group}</div>` : "";
+    currentGroup = mod.group;
+    return `${group}
     <button class="nav-button ${mod.id === app.view ? "active" : ""}" data-view="${mod.id}" type="button">
       <span class="nav-icon">${mod.icon}</span><span>${mod.label}</span>
-    </button>`).join("");
+    </button>`;
+  }).join("");
   document.querySelectorAll(".nav-button").forEach((button) => button.addEventListener("click", () => app.navigate(button.dataset.view)));
 }
 

@@ -12,7 +12,7 @@ export function emptyState() {
       address: "",
       phone: "",
       email: "",
-      currency: "BOB",
+      currency: "DOP",
       taxRate: 18,
       invoiceFormat: "Carta",
       invoicePrefix: "F",

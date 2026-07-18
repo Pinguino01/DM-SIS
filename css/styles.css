@@ -108,6 +108,14 @@ h1 {
 
 .nav-icon { font-size: 16px; }
 
+.nav-group {
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 14px 8px 6px;
+  text-transform: uppercase;
+}
+
 .content {
   padding: 18px;
   min-width: 0;
