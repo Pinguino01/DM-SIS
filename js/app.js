@@ -13,6 +13,9 @@ import { renderSettings } from "../modules/settings.js";
 import { renderCash } from "../modules/cash.js";
 import { renderAccountingSection } from "../modules/accounting.js";
 
+const ACCOUNTING_ACCESS_PASSWORD = "Contable2026!";
+const ACCOUNTING_UNLOCK_KEY = "dm_sis_accounting_unlocked";
+
 const modules = [
   { id: "dashboard", group: "COMERCIAL", label: "Dashboard", icon: "D", render: renderDashboard },
   { id: "sales", group: "COMERCIAL", label: "Ventas", icon: "$", render: renderSales },
@@ -25,18 +28,18 @@ const modules = [
   { id: "purchases", group: "COMERCIAL", label: "Compras", icon: "+", render: renderPurchases },
   { id: "reports", group: "COMERCIAL", label: "Reportes", icon: "R", render: renderReports },
   { id: "accountingDashboard", group: "CONTABILIDAD", label: "Resumen contable", icon: "R", render: (app) => renderAccountingSection(app, "accountingDashboard") },
-  { id: "chartOfAccounts", group: "CONTABILIDAD", label: "Catalogo de cuentas", icon: "C", render: (app) => renderAccountingSection(app, "chartOfAccounts") },
-  { id: "journal", group: "CONTABILIDAD", label: "Asientos", icon: "A", render: (app) => renderAccountingSection(app, "journal") },
-  { id: "ledger", group: "CONTABILIDAD", label: "Libro mayor", icon: "M", render: (app) => renderAccountingSection(app, "ledger") },
-  { id: "trialBalance", group: "CONTABILIDAD", label: "Balanza", icon: "B", render: (app) => renderAccountingSection(app, "trialBalance") },
-  { id: "ar", group: "CONTABILIDAD", label: "Cuentas por cobrar", icon: "R", render: (app) => renderAccountingSection(app, "ar") },
-  { id: "ap", group: "CONTABILIDAD", label: "Cuentas por pagar", icon: "P", render: (app) => renderAccountingSection(app, "ap") },
-  { id: "banks", group: "CONTABILIDAD", label: "Caja y bancos", icon: "B", render: (app) => renderAccountingSection(app, "banks") },
-  { id: "reconciliation", group: "CONTABILIDAD", label: "Conciliacion bancaria", icon: "X", render: (app) => renderAccountingSection(app, "reconciliation") },
-  { id: "costCenters", group: "CONTABILIDAD", label: "Centros de costos", icon: "K", render: (app) => renderAccountingSection(app, "costCenters") },
-  { id: "periods", group: "CONTABILIDAD", label: "Periodos", icon: "T", render: (app) => renderAccountingSection(app, "periods") },
-  { id: "financialStatements", group: "CONTABILIDAD", label: "Estados financieros", icon: "E", render: (app) => renderAccountingSection(app, "financialStatements") },
-  { id: "accountingSettings", group: "CONTABILIDAD", label: "Configuracion contable", icon: "G", render: (app) => renderAccountingSection(app, "accountingSettings") },
+  { id: "chartOfAccounts", group: "CONTABILIDAD", label: "Catalogo de cuentas", icon: "C", restricted: true, render: (app) => renderAccountingSection(app, "chartOfAccounts") },
+  { id: "journal", group: "CONTABILIDAD", label: "Asientos", icon: "A", restricted: true, render: (app) => renderAccountingSection(app, "journal") },
+  { id: "ledger", group: "CONTABILIDAD", label: "Libro mayor", icon: "M", restricted: true, render: (app) => renderAccountingSection(app, "ledger") },
+  { id: "trialBalance", group: "CONTABILIDAD", label: "Balanza", icon: "B", restricted: true, render: (app) => renderAccountingSection(app, "trialBalance") },
+  { id: "ar", group: "CONTABILIDAD", label: "Cuentas por cobrar", icon: "R", restricted: true, render: (app) => renderAccountingSection(app, "ar") },
+  { id: "ap", group: "CONTABILIDAD", label: "Cuentas por pagar", icon: "P", restricted: true, render: (app) => renderAccountingSection(app, "ap") },
+  { id: "banks", group: "CONTABILIDAD", label: "Caja y bancos", icon: "B", restricted: true, render: (app) => renderAccountingSection(app, "banks") },
+  { id: "reconciliation", group: "CONTABILIDAD", label: "Conciliacion bancaria", icon: "X", restricted: true, render: (app) => renderAccountingSection(app, "reconciliation") },
+  { id: "costCenters", group: "CONTABILIDAD", label: "Centros de costos", icon: "K", restricted: true, render: (app) => renderAccountingSection(app, "costCenters") },
+  { id: "periods", group: "CONTABILIDAD", label: "Periodos", icon: "T", restricted: true, render: (app) => renderAccountingSection(app, "periods") },
+  { id: "financialStatements", group: "CONTABILIDAD", label: "Estados financieros", icon: "E", restricted: true, render: (app) => renderAccountingSection(app, "financialStatements") },
+  { id: "accountingSettings", group: "CONTABILIDAD", label: "Configuracion contable", icon: "G", restricted: true, render: (app) => renderAccountingSection(app, "accountingSettings") },
   { id: "settings", group: "SISTEMA", label: "Configuracion", icon: "O", render: renderSettings }
 ];
 
@@ -249,15 +252,45 @@ const app = {
 
 function renderNav() {
   let currentGroup = "";
-  document.getElementById("mainNav").innerHTML = modules.map((mod) => {
+  const unlocked = isAccountingUnlocked();
+  document.getElementById("mainNav").innerHTML = modules.filter((mod) => !mod.restricted || unlocked).map((mod) => {
     const group = mod.group !== currentGroup ? `<div class="nav-group">${mod.group}</div>` : "";
     currentGroup = mod.group;
+    const unlockButton = mod.id === "accountingDashboard" && !unlocked
+      ? `<button class="nav-button locked" data-unlock-accounting type="button"><span class="nav-icon">L</span><span>Acceso contador</span></button>`
+      : "";
     return `${group}
     <button class="nav-button ${mod.id === app.view ? "active" : ""}" data-view="${mod.id}" type="button">
       <span class="nav-icon">${mod.icon}</span><span>${mod.label}</span>
-    </button>`;
+    </button>${unlockButton}`;
   }).join("");
-  document.querySelectorAll(".nav-button").forEach((button) => button.addEventListener("click", () => app.navigate(button.dataset.view)));
+  document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.addEventListener("click", () => app.navigate(button.dataset.view)));
+  document.querySelectorAll("[data-unlock-accounting]").forEach((button) => button.addEventListener("click", unlockAccountingAccess));
+}
+
+function isAccountingUnlocked() {
+  return sessionStorage.getItem(ACCOUNTING_UNLOCK_KEY) === "true";
+}
+
+async function unlockAccountingAccess() {
+  const result = await Swal.fire({
+    title: "Acceso contador",
+    text: "Ingrese la clave para mostrar los modulos contables detallados.",
+    input: "password",
+    inputPlaceholder: "Clave contable",
+    showCancelButton: true,
+    confirmButtonText: "Acceder",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#2563eb"
+  });
+  if (!result.isConfirmed) return;
+  if (result.value !== ACCOUNTING_ACCESS_PASSWORD) {
+    toast("Clave incorrecta", "error");
+    return;
+  }
+  sessionStorage.setItem(ACCOUNTING_UNLOCK_KEY, "true");
+  renderNav();
+  toast("Modulos contables habilitados");
 }
 
 function exportExcel() {

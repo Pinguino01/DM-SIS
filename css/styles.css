@@ -106,6 +106,12 @@ h1 {
   transform: translateX(2px);
 }
 
+.nav-button.locked {
+  border: 1px dashed #475467;
+  color: #f9fafb;
+  background: #344054;
+}
+
 .nav-icon { font-size: 16px; }
 
 .nav-group {
