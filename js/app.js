@@ -259,13 +259,17 @@ function renderNav() {
     const unlockButton = mod.id === "accountingDashboard" && !unlocked
       ? `<button class="nav-button locked" data-unlock-accounting type="button"><span class="nav-icon">L</span><span>Acceso contador</span></button>`
       : "";
+    const logoutButton = mod.id === "accountingDashboard" && unlocked
+      ? `<button class="nav-button locked" data-lock-accounting type="button"><span class="nav-icon">S</span><span>Cerrar sesion contable</span></button>`
+      : "";
     return `${group}
     <button class="nav-button ${mod.id === app.view ? "active" : ""}" data-view="${mod.id}" type="button">
       <span class="nav-icon">${mod.icon}</span><span>${mod.label}</span>
-    </button>${unlockButton}`;
+    </button>${unlockButton}${logoutButton}`;
   }).join("");
   document.querySelectorAll(".nav-button[data-view]").forEach((button) => button.addEventListener("click", () => app.navigate(button.dataset.view)));
   document.querySelectorAll("[data-unlock-accounting]").forEach((button) => button.addEventListener("click", unlockAccountingAccess));
+  document.querySelectorAll("[data-lock-accounting]").forEach((button) => button.addEventListener("click", lockAccountingAccess));
 }
 
 function isAccountingUnlocked() {
@@ -291,6 +295,16 @@ async function unlockAccountingAccess() {
   sessionStorage.setItem(ACCOUNTING_UNLOCK_KEY, "true");
   renderNav();
   toast("Modulos contables habilitados");
+}
+
+function lockAccountingAccess() {
+  sessionStorage.removeItem(ACCOUNTING_UNLOCK_KEY);
+  if (modules.find((mod) => mod.id === app.view)?.restricted) {
+    app.view = "accountingDashboard";
+    app.render();
+  }
+  renderNav();
+  toast("Sesion contable cerrada");
 }
 
 function exportExcel() {
