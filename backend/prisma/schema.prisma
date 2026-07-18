@@ -1,0 +1,780 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  COST
+  EXPENSE
+  MEMO
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum PeriodStatus {
+  OPEN
+  SOFT_CLOSED
+  CLOSED
+}
+
+enum JournalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  POSTED
+  REVERSED
+  VOID
+}
+
+enum JournalEntryType {
+  MANUAL
+  AUTOMATIC
+  ADJUSTMENT
+  OPENING
+  CLOSING
+  REVERSAL
+}
+
+enum PostingStatus {
+  NOT_POSTED
+  POSTED
+  REVERSED
+  ERROR
+}
+
+enum DocumentType {
+  QUOTE
+  ORDER
+  INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING
+  PAID
+  VOID
+  OVERDUE
+}
+
+enum PurchaseStatus {
+  DRAFT
+  PENDING
+  RECEIVED
+  POSTED
+  VOID
+}
+
+enum InventoryMovementType {
+  INITIAL
+  PURCHASE
+  SALE
+  RETURN_IN
+  RETURN_OUT
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  TRANSFER
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  VOID
+  REVERSE
+  POST
+  CLOSE
+  REOPEN
+  EXPORT
+  IMPORT
+}
+
+model Company {
+  id                       String   @id @default(uuid())
+  commercialName           String
+  legalName                String
+  rnc                      String?
+  address                  String?
+  phone                    String?
+  email                    String?
+  currency                 String   @default("DOP")
+  defaultTaxRate           Decimal  @default(18) @db.Decimal(9, 4)
+  logoUrl                  String?
+  fiscalYearStartMonth     Int      @default(1)
+  inventoryValuationMethod String   @default("WEIGHTED_AVERAGE")
+  invoiceNumberFormat      String   @default("F-{000000}")
+  fiscalConfig             Json?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  branches          Branch[]
+  users             User[]
+  roles             Role[]
+  permissions       Permission[]
+  accounts          LedgerAccount[]
+  periods           AccountingPeriod[]
+  journalEntries    JournalEntry[]
+  accountingRules   AccountingRule[]
+  customers         Customer[]
+  suppliers         Supplier[]
+  products          Product[]
+  documents         SalesDocument[]
+  purchases         PurchaseInvoice[]
+  warehouses        Warehouse[]
+  paymentMethods    PaymentMethod[]
+  bankAccounts      BankAccount[]
+  costCenters       CostCenter[]
+  auditLogs         AuditLog[]
+  taxTypes          TaxType[]
+  fiscalSequences   FiscalSequence[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  code      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  users   User[]
+
+  @@unique([companyId, code])
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  companyId          String
+  branchId           String?
+  name               String
+  email              String
+  passwordHash       String
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  lastAccessAt       DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  branch    Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  userRoles UserRole[]
+  auditLogs AuditLog[]
+
+  @@unique([companyId, email])
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, name])
+}
+
+model Permission {
+  id        String   @id @default(uuid())
+  companyId String
+  module    String
+  action    String
+  createdAt DateTime @default(now())
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  rolePermissions RolePermission[]
+
+  @@unique([companyId, module, action])
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model LedgerAccount {
+  id             String        @id @default(uuid())
+  companyId      String
+  code           String
+  name           String
+  parentId       String?
+  accountType    AccountType
+  normalBalance  NormalBalance
+  level          Int
+  allowsPosting  Boolean       @default(true)
+  systemAccount  Boolean       @default(false)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  parent  LedgerAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  child   LedgerAccount[] @relation("AccountHierarchy")
+  lines   JournalEntryLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId, accountType])
+}
+
+model AccountingPeriod {
+  id         String       @id @default(uuid())
+  companyId  String
+  fiscalYear Int
+  month      Int
+  startDate  DateTime
+  endDate    DateTime
+  status     PeriodStatus @default(OPEN)
+  closedAt   DateTime?
+  closedBy   String?
+  reopenedAt DateTime?
+  reopenedBy String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  entries JournalEntry[]
+
+  @@unique([companyId, fiscalYear, month])
+}
+
+model JournalEntry {
+  id                 String           @id @default(uuid())
+  companyId          String
+  branchId           String?
+  entryNumber        String
+  entryDate          DateTime
+  description        String
+  entryType          JournalEntryType
+  sourceModule       String?
+  sourceType         String?
+  sourceId           String?
+  accountingPeriodId String
+  status             JournalStatus    @default(DRAFT)
+  currency           String           @default("DOP")
+  exchangeRate       Decimal          @default(1) @db.Decimal(18, 8)
+  createdBy          String?
+  approvedBy         String?
+  reversedEntryId    String?
+  createdAt          DateTime         @default(now())
+  approvedAt         DateTime?
+
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  period        AccountingPeriod    @relation(fields: [accountingPeriodId], references: [id], onDelete: Restrict)
+  reversedEntry JournalEntry?       @relation("EntryReversal", fields: [reversedEntryId], references: [id], onDelete: Restrict)
+  reversals     JournalEntry[]      @relation("EntryReversal")
+  lines         JournalEntryLine[]
+
+  @@unique([companyId, entryNumber])
+  @@index([companyId, entryDate])
+}
+
+model JournalEntryLine {
+  id             String   @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  description    String?
+  debit          Decimal  @default(0) @db.Decimal(18, 4)
+  credit         Decimal  @default(0) @db.Decimal(18, 4)
+  customerId     String?
+  supplierId     String?
+  productId      String?
+  costCenterId   String?
+  branchId       String?
+  currency       String   @default("DOP")
+  exchangeRate   Decimal  @default(1) @db.Decimal(18, 8)
+
+  journalEntry JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      LedgerAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([costCenterId])
+}
+
+model AccountingRule {
+  id                   String   @id @default(uuid())
+  companyId            String
+  eventType             String
+  operationType         String?
+  productCategoryId     String?
+  paymentMethodId       String?
+  taxTypeId             String?
+  debitAccountId        String?
+  creditAccountId       String?
+  inventoryAccountId    String?
+  costOfSalesAccountId  String?
+  taxAccountId          String?
+  receivableAccountId   String?
+  payableAccountId      String?
+  priority              Int      @default(100)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, eventType, isActive])
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  document    String?
+  fiscalType  String?
+  phone       String?
+  email       String?
+  address     String?
+  creditLimit Decimal  @default(0) @db.Decimal(18, 4)
+  creditDays  Int      @default(0)
+  isActive    Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  documents SalesDocument[]
+
+  @@index([companyId, name])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  rnc         String?
+  fiscalType  String?
+  contact     String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  purchases PurchaseInvoice[]
+}
+
+model Product {
+  id                    String   @id @default(uuid())
+  companyId             String
+  sku                   String?
+  barcode               String?
+  name                  String
+  category              String?
+  brand                 String?
+  unit                  String   @default("Unidad")
+  cost                  Decimal  @default(0) @db.Decimal(18, 4)
+  averageCost           Decimal  @default(0) @db.Decimal(18, 4)
+  price                 Decimal  @default(0) @db.Decimal(18, 4)
+  wholesalePrice        Decimal  @default(0) @db.Decimal(18, 4)
+  retailPrice           Decimal  @default(0) @db.Decimal(18, 4)
+  minStock              Decimal  @default(0) @db.Decimal(18, 4)
+  maxStock              Decimal? @db.Decimal(18, 4)
+  imageUrl              String?
+  description           String?
+  inventoryAccountId    String?
+  salesAccountId        String?
+  costOfSalesAccountId  String?
+  purchaseAccountId     String?
+  salesReturnAccountId  String?
+  purchaseReturnAccountId String?
+  taxCategoryId         String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, sku])
+  @@unique([companyId, barcode])
+}
+
+model SalesDocument {
+  id                 String         @id @default(uuid())
+  companyId          String
+  branchId           String?
+  customerId         String?
+  documentType       DocumentType
+  number             String
+  status             DocumentStatus @default(DRAFT)
+  issueDate          DateTime
+  dueDate            DateTime?
+  fiscalDocumentType String?
+  ncf                String?
+  subtotal           Decimal        @default(0) @db.Decimal(18, 4)
+  discount           Decimal        @default(0) @db.Decimal(18, 4)
+  tax                Decimal        @default(0) @db.Decimal(18, 4)
+  total              Decimal        @default(0) @db.Decimal(18, 4)
+  paidAmount         Decimal        @default(0) @db.Decimal(18, 4)
+  balance            Decimal        @default(0) @db.Decimal(18, 4)
+  paymentTerms       String?
+  currency           String         @default("DOP")
+  exchangeRate       Decimal        @default(1) @db.Decimal(18, 8)
+  postingStatus      PostingStatus  @default(NOT_POSTED)
+  journalEntryId     String?
+  postedAt           DateTime?
+  postedBy           String?
+  incomeAccountId    String?
+  taxAccountId       String?
+  costCenterId       String?
+  notes              String?
+  voidReason         String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  company  Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lines    SalesDocumentLine[]
+  payments CustomerPayment[]
+
+  @@unique([companyId, number])
+  @@index([companyId, issueDate])
+}
+
+model SalesDocumentLine {
+  id         String   @id @default(uuid())
+  documentId String
+  productId  String?
+  description String
+  quantity   Decimal  @db.Decimal(18, 4)
+  unitPrice  Decimal  @db.Decimal(18, 4)
+  discount   Decimal  @default(0) @db.Decimal(18, 4)
+  taxRate    Decimal  @default(0) @db.Decimal(9, 4)
+  tax        Decimal  @default(0) @db.Decimal(18, 4)
+  total      Decimal  @db.Decimal(18, 4)
+
+  document SalesDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model CustomerPayment {
+  id              String   @id @default(uuid())
+  companyId       String
+  customerId      String?
+  salesDocumentId String?
+  paymentMethodId String
+  amount          Decimal  @db.Decimal(18, 4)
+  reference       String?
+  paymentDate     DateTime
+  journalEntryId  String?
+  createdAt       DateTime @default(now())
+
+  document SalesDocument? @relation(fields: [salesDocumentId], references: [id], onDelete: Restrict)
+}
+
+model SupplierPayment {
+  id                String   @id @default(uuid())
+  companyId         String
+  supplierId        String?
+  purchaseInvoiceId String?
+  paymentMethodId   String
+  amount            Decimal  @db.Decimal(18, 4)
+  reference         String?
+  paymentDate       DateTime
+  journalEntryId    String?
+  createdAt         DateTime @default(now())
+}
+
+model PurchaseInvoice {
+  id                    String         @id @default(uuid())
+  companyId             String
+  supplierId            String?
+  supplierInvoiceNumber String?
+  ncf                   String?
+  issueDate             DateTime
+  dueDate               DateTime?
+  subtotal              Decimal        @default(0) @db.Decimal(18, 4)
+  discount              Decimal        @default(0) @db.Decimal(18, 4)
+  tax                   Decimal        @default(0) @db.Decimal(18, 4)
+  withholding           Decimal        @default(0) @db.Decimal(18, 4)
+  otherTaxes            Decimal        @default(0) @db.Decimal(18, 4)
+  total                 Decimal        @default(0) @db.Decimal(18, 4)
+  paidAmount            Decimal        @default(0) @db.Decimal(18, 4)
+  balance               Decimal        @default(0) @db.Decimal(18, 4)
+  paymentTerms          String?
+  currency              String         @default("DOP")
+  exchangeRate          Decimal        @default(1) @db.Decimal(18, 8)
+  postingStatus         PostingStatus  @default(NOT_POSTED)
+  journalEntryId        String?
+  status                PurchaseStatus @default(DRAFT)
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  company  Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  supplier Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  lines    PurchaseInvoiceLine[]
+}
+
+model PurchaseInvoiceLine {
+  id                String   @id @default(uuid())
+  purchaseInvoiceId String
+  productId         String?
+  expenseAccountId  String?
+  description       String
+  quantity          Decimal  @db.Decimal(18, 4)
+  unitCost          Decimal  @db.Decimal(18, 4)
+  discount          Decimal  @default(0) @db.Decimal(18, 4)
+  tax               Decimal  @default(0) @db.Decimal(18, 4)
+  total             Decimal  @db.Decimal(18, 4)
+
+  purchase PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  companyId String
+  branchId  String?
+  code      String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, code])
+}
+
+model InventoryMovement {
+  id             String                @id @default(uuid())
+  companyId      String
+  warehouseId    String?
+  movementType   InventoryMovementType
+  movementDate   DateTime
+  reference      String?
+  sourceModule   String?
+  sourceId       String?
+  journalEntryId String?
+  notes          String?
+  createdBy      String?
+  createdAt      DateTime              @default(now())
+
+  lines InventoryMovementLine[]
+}
+
+model InventoryMovementLine {
+  id                  String   @id @default(uuid())
+  inventoryMovementId String
+  productId           String
+  quantity            Decimal  @db.Decimal(18, 4)
+  unitCost            Decimal  @db.Decimal(18, 4)
+  totalCost           Decimal  @db.Decimal(18, 4)
+  previousStock       Decimal  @default(0) @db.Decimal(18, 4)
+  newStock            Decimal  @default(0) @db.Decimal(18, 4)
+
+  movement InventoryMovement @relation(fields: [inventoryMovementId], references: [id], onDelete: Cascade)
+}
+
+model StockBalance {
+  id          String   @id @default(uuid())
+  companyId   String
+  warehouseId String
+  productId   String
+  quantity    Decimal  @default(0) @db.Decimal(18, 4)
+  averageCost Decimal  @default(0) @db.Decimal(18, 4)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, warehouseId, productId])
+}
+
+model CashRegister {
+  id        String   @id @default(uuid())
+  companyId String
+  branchId  String?
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model CashSession {
+  id             String            @id @default(uuid())
+  companyId      String
+  cashRegisterId String
+  openedBy       String
+  openedAt       DateTime          @default(now())
+  openingAmount  Decimal           @default(0) @db.Decimal(18, 4)
+  closedBy       String?
+  closedAt       DateTime?
+  closingAmount  Decimal?          @db.Decimal(18, 4)
+  difference     Decimal?          @db.Decimal(18, 4)
+  status         CashSessionStatus @default(OPEN)
+}
+
+model CashMovement {
+  id              String   @id @default(uuid())
+  companyId       String
+  cashSessionId   String?
+  paymentMethodId String?
+  movementDate    DateTime
+  type            String
+  amount          Decimal  @db.Decimal(18, 4)
+  concept         String
+  reference       String?
+  journalEntryId  String?
+  createdBy       String?
+  createdAt       DateTime @default(now())
+}
+
+model BankAccount {
+  id              String   @id @default(uuid())
+  companyId       String
+  bankName        String
+  accountNumber   String
+  currency        String   @default("DOP")
+  ledgerAccountId String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+}
+
+model BankTransaction {
+  id             String   @id @default(uuid())
+  companyId      String
+  bankAccountId  String
+  transactionDate DateTime
+  description    String
+  debit          Decimal  @default(0) @db.Decimal(18, 4)
+  credit         Decimal  @default(0) @db.Decimal(18, 4)
+  isReconciled   Boolean  @default(false)
+  reconciledAt   DateTime?
+  journalEntryId String?
+  createdAt      DateTime @default(now())
+}
+
+model PaymentMethod {
+  id              String   @id @default(uuid())
+  companyId       String
+  name            String
+  type            String
+  ledgerAccountId String?
+  requiresReference Boolean @default(false)
+  isActive        Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, name])
+}
+
+model CostCenter {
+  id        String   @id @default(uuid())
+  companyId String
+  code      String
+  name      String
+  parentId  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, code])
+}
+
+model TaxType {
+  id        String   @id @default(uuid())
+  companyId String
+  code      String
+  name      String
+  rate      Decimal  @db.Decimal(9, 4)
+  validFrom DateTime
+  validTo   DateTime?
+  isActive  Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, code])
+}
+
+model FiscalSequence {
+  id        String   @id @default(uuid())
+  companyId String
+  type      String
+  prefix    String
+  nextNumber Int
+  validUntil DateTime?
+  isActive  Boolean  @default(true)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+}
+
+model Attachment {
+  id          String   @id @default(uuid())
+  companyId   String
+  entityType  String
+  entityId    String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  path        String
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, entityType, entityId])
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  companyId   String?
+  userId      String?
+  ipAddress   String?
+  action      AuditAction
+  module      String
+  entity      String
+  entityId    String?
+  oldValues   Json?
+  newValues   Json?
+  reason      String?
+  relatedDocument String?
+  createdAt   DateTime    @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, module, entity])
+  @@index([createdAt])
+}
